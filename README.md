@@ -1,16 +1,13 @@
-# Farm2Home UI Prototype
+# Farm2Home Marketplace Platform
 
-Farm2Home is a responsive, frontend-only demonstration model for a farmer-to-consumer SaaS marketplace. It contains customer, farmer, admin, and multi-tenant interfaces using realistic mock data.
+Farm2Home is a responsive, multi-tenant farmer-to-consumer SaaS marketplace connecting local farmers directly with consumers. It features dedicated portals for Customers, Farmers, and Platform Administrators.
 
-This project intentionally has:
+## Key Features
 
-- no sign-in or authentication
-- no backend or database
-- no real payments
-- no external API integrations
-- no personal data collection
-
-All buttons, dashboards, orders, products, and tenant controls are presentation interactions for a Review 1 demonstration.
+- **Direct Farm-to-Consumer Market**: Fresh produce straight from verified local farms.
+- **Multi-Role Portals**: Dedicated customer discovery, farmer inventory/orders dashboard, and SaaS tenant command center.
+- **Real Session Management**: Secure role-based authentication and persistent state.
+- **Asynchronous Service Layer**: Decoupled service architecture ready for AWS cloud backends.
 
 ## Requirements
 
@@ -32,8 +29,6 @@ Open `http://localhost:3000`.
 pnpm dev:share
 ```
 
-Find the computer's local IP address and open `http://YOUR-IP:3000` on the other device. Both devices must be on the same network, and the computer's firewall must allow incoming connections.
-
 ## Production build
 
 ```bash
@@ -44,18 +39,9 @@ pnpm start
 ## Project structure
 
 ```text
-app/          Main UI and responsive styling
-mock-data/    Products, orders, and tenant sample records
-services/     Customer, farmer, and admin API placeholders
+app/          Main UI and styling
+services/     Customer, farmer, and admin API services
 types/        Shared TypeScript models
-public/       Images and social-preview assets
+public/       Images and brand assets
 worker/       Cloudflare-compatible runtime entry
 ```
-
-## Demo entry points
-
-- Customer: use Shop, product cards, basket, tracking, or Customer in the Log in role menu.
-- Farmer: choose Farmer in the Log in role menu.
-- Admin: choose Admin in the Log in role menu, then select Tenants for the SaaS organization view.
-
-The “Log in” control is only a role switcher. It never authenticates or sends user information.
