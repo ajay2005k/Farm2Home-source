@@ -1,34 +1,16 @@
-import { Plus_Jakarta_Sans, Outfit, Playfair_Display, Geist_Mono } from "next/font/google";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const jakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-sans",
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
-});
-
-const outfit = Outfit({
-  variable: "--font-heading",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["500", "600", "700"],
-});
-
-const playfair = Playfair_Display({
-  variable: "--font-serif",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-  display: "swap",
 });
-
-import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
@@ -59,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${jakartaSans.variable} ${outfit.variable} ${playfair.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>

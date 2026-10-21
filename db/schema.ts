@@ -1,81 +1,56 @@
-// Drizzle Schema for Farm2Home Cluster-Based Agricultural Supply Platform
-// Ready for AWS RDS (PostgreSQL / Aurora) or Cloudflare D1 integration
+import { sql } from "drizzle-orm";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { pgTable, text, integer, boolean, timestamp, real } from "drizzle-orm/pg-core";
-
-export const clusters = pgTable("clusters", {
+export const tenants = sqliteTable("tenants", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  code: text("code").notNull().unique(),
+  initials: text("initials").notNull(),
+  status: text("status", { enum: ["Active", "Paused"] }).notNull().default("Active"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const clusters = sqliteTable("clusters", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").references(() => tenants.id),
+  name: text("name").notNull(),
+  type: text("type", { enum: ["farm_production", "consumer_delivery"] }).notNull(),
+  region: text("region").notNull(),
+  hubLocation: text("hub_location").notNull(),
+  activeCount: integer("active_count").notNull().default(0),
+  capacity: text("capacity").notNull().default("Standard"),
+  nextDispatchSlot: text("next_dispatch_slot").notNull(),
+  savingsSummary: text("savings_summary").notNull(),
+  status: text("status", { enum: ["Active", "Scheduled", "Paused"] }).notNull().default("Active"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const products = sqliteTable("products", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  farmer: text("farmer").notNull(),
+  farm: text("farm").notNull(),
   location: text("location").notNull(),
-  managerId: text("manager_id").notNull(),
-  managerName: text("manager_name").notNull(),
-  capacityKg: integer("capacity_kg").notNull().default(5000),
-  status: text("status").notNull().default("Active"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const users = pgTable("users", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  role: text("role").notNull(), // customer | farmer | cluster_manager
-  clusterId: text("cluster_id"),
-  clusterName: text("cluster_name"),
-  farmName: text("farm_name"),
-  location: text("location"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const farmerProduceSubmissions = pgTable("farmer_produce_submissions", {
-  id: text("id").primaryKey(),
-  farmerId: text("farmer_id").notNull(),
-  farmerName: text("farmer_name").notNull(),
-  farmName: text("farm_name").notNull(),
-  clusterId: text("cluster_id").notNull(),
-  productName: text("product_name").notNull(),
-  category: text("category").notNull(),
-  unit: text("unit").notNull(),
-  estimatedQuantity: real("estimated_quantity").notNull(),
-  pricePerUnit: real("price_per_unit").notNull(),
-  organic: boolean("organic").notNull().default(false),
-  harvestDate: text("harvest_date").notNull(),
-  status: text("status").notNull().default("Submitted"), // Submitted | Collected | Accepted | Rejected
-  receivedQuantity: real("received_quantity"),
-  acceptedQuantity: real("accepted_quantity"),
-  rejectedQuantity: real("rejected_quantity"),
-  rejectionReason: text("rejection_reason"),
-  verifiedAt: timestamp("verified_at"),
-  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
-});
-
-export const clusterInventories = pgTable("cluster_inventories", {
-  id: text("id").primaryKey(),
-  clusterId: text("cluster_id").notNull(),
+  clusterId: text("cluster_id").references(() => clusters.id),
   clusterName: text("cluster_name").notNull(),
-  productName: text("product_name").notNull(),
-  category: text("category").notNull(),
+  rating: integer("rating").notNull().default(5),
+  price: integer("price").notNull(),
   unit: text("unit").notNull(),
-  totalAcceptedQty: real("total_accepted_qty").notNull().default(0),
-  availableStockQty: real("available_stock_qty").notNull().default(0),
-  allocatedQty: real("allocated_qty").notNull().default(0),
-  retailPrice: real("retail_price").notNull(),
-  farmerCostPerUnit: real("farmer_cost_per_unit").notNull(),
-  organic: boolean("organic").notNull().default(false),
-  image: text("image"),
-  lastAggregatedAt: timestamp("last_aggregated_at").defaultNow().notNull(),
+  organic: integer("organic", { mode: "boolean" }).notNull().default(false),
+  category: text("category").notNull(),
+  image: text("image").notNull(),
+  stock: integer("stock").notNull().default(0),
 });
 
-export const customerOrders = pgTable("customer_orders", {
+export const orders = sqliteTable("orders", {
   id: text("id").primaryKey(),
-  customerId: text("customer_id").notNull(),
-  customerName: text("customer_name").notNull(),
-  deliveryAddress: text("delivery_address").notNull(),
-  subtotal: real("subtotal").notNull(),
-  deliveryFee: real("delivery_fee").notNull(),
-  discount: real("discount").notNull(),
-  totalAmount: real("total_amount").notNull(),
-  status: text("status").notNull().default("Placed"), // Placed | Confirmed | Allocated | OutForDelivery | Delivered
-  clusterId: text("cluster_id"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  customer: text("customer").notNull(),
+  product: text("product").notNull(),
+  amount: integer("amount").notNull(),
+  status: text("status", { enum: ["New", "Accepted", "Preparing", "Ready", "Completed"] }).notNull().default("New"),
+  date: text("date").notNull(),
+  deliveryType: text("delivery_type", { enum: ["doorstep", "cluster_pickup"] }).default("cluster_pickup"),
+  clusterId: text("cluster_id").references(() => clusters.id),
+  clusterName: text("cluster_name"),
+  pickupPoint: text("pickup_point"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

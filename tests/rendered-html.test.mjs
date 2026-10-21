@@ -18,5 +18,6 @@ test("server-renders the Farm2Home prototype", async () => {
   assert.match(html, /Farm2Home/);
   assert.match(html, /Fresh from local farms/i);
   assert.match(html, /Shop fresh produce/i);
+  assert.match(html, /farm cluster/i);
   assert.doesNotMatch(html, /signin-with-chatgpt|oai-authenticated-user/i);
 });
