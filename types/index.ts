@@ -1,5 +1,13 @@
 export type Role = "customer" | "farmer" | "admin";
 
+export type AuthUser = {
+  username: string;
+  name: string;
+  email: string;
+  role: Role;
+  avatarInitials: string;
+};
+
 export type ClusterType = "farm_production" | "consumer_delivery";
 
 export type Cluster = {

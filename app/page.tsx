@@ -2,9 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { clusters as seedClusters, orders as seedOrders, products, tenants as seedTenants } from "../mock-data";
-import type { Cluster, OrderStatus, Product, ProductSource, Role } from "../types";
+import { clearStoredUser, getStoredUser } from "../services/authService";
+import type { AuthUser, Cluster, OrderStatus, Product, ProductSource, Role } from "../types";
+import DeliveryRouteMap from "./DeliveryRouteMap";
+import LoginPage from "./LoginPage";
 
-type View = "home"|"shop"|"product"|"cart"|"tracking"|"customer"|"farmer"|"admin";
+type View = "home"|"shop"|"product"|"cart"|"tracking"|"customer"|"farmer"|"admin"|"login";
 
 type CartEntry = {
   product: Product;
@@ -25,6 +28,9 @@ const roleInfo = [
 export default function Home() {
   const [view,setView] = useState<View>("home");
   const [roleOpen,setRoleOpen] = useState(false);
+  const [userMenuOpen,setUserMenuOpen] = useState(false);
+  const [currentUser,setCurrentUser] = useState<AuthUser | null>(() => getStoredUser());
+
   const [cart,setCart] = useState<CartEntry[]>([
     { product: products[0], source: products[0].sources[0], quantity: 2 },
     { product: products[1], source: products[1].sources[0], quantity: 1 },
@@ -39,6 +45,7 @@ export default function Home() {
   const [selectedDropCluster,setSelectedDropCluster] = useState<Cluster>(
     seedClusters.find(c => c.type === "consumer_delivery") || seedClusters[6]
   );
+  const [userAddress,setUserAddress] = useState("Flat 4B, Lake View Enclave, Velachery, Chennai 600042");
   const [toast,setToast] = useState("");
   const notify = (message:string) => { setToast(message); window.setTimeout(()=>setToast(""),2200); };
   const navigate = (next:View) => { setView(next); setRoleOpen(false); window.scrollTo({top:0,behavior:"smooth"}); };
@@ -85,14 +92,66 @@ export default function Home() {
   if (view === "farmer") return <FarmerDashboard onExit={()=>navigate("home")} notify={notify} toast={toast}/>;
   if (view === "admin") return <AdminDashboard onExit={()=>navigate("home")} notify={notify} toast={toast}/>;
   if (view === "customer") return <CustomerDashboard onNavigate={navigate} cartCount={cartCount}/>;
+  if (view === "login") {
+    return (
+      <LoginPage
+        currentUser={currentUser}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          navigate("home");
+        }}
+        onLogout={() => {
+          clearStoredUser();
+          setCurrentUser(null);
+        }}
+        onExit={() => navigate("home")}
+        notify={notify}
+        onSelectRoleView={(role) => navigate(role)}
+      />
+    );
+  }
 
   return <main>
-    <CustomerHeader active={view} cart={cartCount} roleOpen={roleOpen} setRoleOpen={setRoleOpen} navigate={navigate}/>
+    <CustomerHeader
+      active={view}
+      cart={cartCount}
+      roleOpen={roleOpen}
+      setRoleOpen={setRoleOpen}
+      userMenuOpen={userMenuOpen}
+      setUserMenuOpen={setUserMenuOpen}
+      currentUser={currentUser}
+      onLogout={() => {
+        clearStoredUser();
+        setCurrentUser(null);
+        notify("Signed out successfully");
+      }}
+      navigate={navigate}
+    />
     {view === "home" && <Landing navigate={navigate} addToCart={(p, s)=>addToCart(p, s || p.sources[0], 1)} showProduct={showProduct} onCompare={(p)=>setCompareProduct(p)} setClusterFilter={setClusterFilter}/>} 
     {view === "shop" && <Shop query={query} setQuery={setQuery} clusterFilter={clusterFilter} setClusterFilter={setClusterFilter} sortBy={sortBy} setSortBy={setSortBy} products={filtered} addToCart={(p, s)=>addToCart(p, s || p.sources[0], 1)} showProduct={showProduct} onCompare={(p)=>setCompareProduct(p)}/>} 
     {view === "product" && <ProductDetail product={selected} initialSource={selectedSource} addToCart={addToCart} navigate={navigate} onCompare={(p)=>setCompareProduct(p)}/>} 
-    {view === "cart" && <Cart cart={cart} setCart={setCart} navigate={navigate} deliveryType={deliveryType} setDeliveryType={setDeliveryType} selectedDropCluster={selectedDropCluster} setSelectedDropCluster={setSelectedDropCluster}/>} 
-    {view === "tracking" && <Tracking navigate={navigate} deliveryType={deliveryType} dropCluster={selectedDropCluster} cart={cart}/>} 
+    {view === "cart" && (
+      <Cart
+        cart={cart}
+        setCart={setCart}
+        navigate={navigate}
+        deliveryType={deliveryType}
+        setDeliveryType={setDeliveryType}
+        selectedDropCluster={selectedDropCluster}
+        setSelectedDropCluster={setSelectedDropCluster}
+        userAddress={userAddress}
+        setUserAddress={setUserAddress}
+      />
+    )} 
+    {view === "tracking" && (
+      <Tracking
+        navigate={navigate}
+        deliveryType={deliveryType}
+        dropCluster={selectedDropCluster}
+        cart={cart}
+        userAddress={userAddress}
+      />
+    )} 
     <Footer navigate={navigate}/>
     {toast && <div className="toast"><span>✓</span>{toast}</div>}
     {compareProduct && (
@@ -108,13 +167,103 @@ export default function Home() {
   </main>;
 }
 
-function CustomerHeader({active,cart,roleOpen,setRoleOpen,navigate}:{active:View;cart:number;roleOpen:boolean;setRoleOpen:(v:boolean)=>void;navigate:(v:View)=>void}) {
-  return <header className="topbar">
-    <button className="brand" onClick={()=>navigate("home")} aria-label="Farm2Home home"><span className="brand-mark"><span>⌂</span></span><span>Farm<span>2</span>Home</span></button>
-    <nav aria-label="Main navigation"><button className={active==="home"?"active":""} onClick={()=>navigate("home")}>Home</button><button className={active==="shop"?"active":""} onClick={()=>navigate("shop")}>Shop</button><button onClick={()=>{navigate("home");setTimeout(()=>document.querySelector("#farmers")?.scrollIntoView(),100)}}>Farmers</button><button onClick={()=>{navigate("home");setTimeout(()=>document.querySelector("#transparency")?.scrollIntoView(),100)}}>Transparency</button><button onClick={()=>{navigate("home");setTimeout(()=>document.querySelector("#how")?.scrollIntoView(),100)}}>How It Works</button></nav>
-    <div className="nav-actions"><button className="icon-button" onClick={()=>navigate("shop")} aria-label="Search">⌕</button><button className="location-button"><span>⌖</span> Chennai Hubs <span className="chev">⌄</span></button><button className="icon-button cart" onClick={()=>navigate("cart")} aria-label={`Cart with ${cart} items`}>⌑{cart>0&&<b>{cart}</b>}</button><button className="login" onClick={()=>setRoleOpen(!roleOpen)}>Log in <span>↗</span></button></div>
-    {roleOpen && <div className="role-menu"><p>Continue as</p>{roleInfo.map((item)=><button key={item.role} onClick={()=>navigate(item.role)}><i>{item.icon}</i><span>{item.label}<small>{item.caption}</small></span><b>›</b></button>)}</div>}
-  </header>;
+function CustomerHeader({
+  active,
+  cart,
+  roleOpen,
+  setRoleOpen,
+  userMenuOpen,
+  setUserMenuOpen,
+  currentUser,
+  onLogout,
+  navigate,
+}: {
+  active: View;
+  cart: number;
+  roleOpen: boolean;
+  setRoleOpen: (v: boolean) => void;
+  userMenuOpen: boolean;
+  setUserMenuOpen: (v: boolean) => void;
+  currentUser: AuthUser | null;
+  onLogout: () => void;
+  navigate: (v: View) => void;
+}) {
+  return (
+    <header className="topbar">
+      <button className="brand" onClick={() => navigate("home")} aria-label="Farm2Home home">
+        <span className="brand-mark"><span>⌂</span></span>
+        <span>Farm<span>2</span>Home</span>
+      </button>
+      <nav aria-label="Main navigation">
+        <button className={active === "home" ? "active" : ""} onClick={() => navigate("home")}>Home</button>
+        <button className={active === "shop" ? "active" : ""} onClick={() => navigate("shop")}>Shop</button>
+        <button onClick={() => { navigate("home"); setTimeout(() => document.querySelector("#farmers")?.scrollIntoView(), 100); }}>Farmers</button>
+        <button onClick={() => { navigate("home"); setTimeout(() => document.querySelector("#transparency")?.scrollIntoView(), 100); }}>Transparency</button>
+        <button onClick={() => { navigate("home"); setTimeout(() => document.querySelector("#how")?.scrollIntoView(), 100); }}>How It Works</button>
+      </nav>
+      <div className="nav-actions">
+        <button className="icon-button" onClick={() => navigate("shop")} aria-label="Search">⌕</button>
+        <button className="location-button"><span>⌖</span> Chennai Hubs <span className="chev">⌄</span></button>
+        <button className="icon-button cart" onClick={() => navigate("cart")} aria-label={`Cart with ${cart} items`}>
+          ⌑{cart > 0 && <b>{cart}</b>}
+        </button>
+        {currentUser ? (
+          <button
+            type="button"
+            className="user-menu-pill"
+            onClick={() => {
+              setUserMenuOpen(!userMenuOpen);
+              setRoleOpen(false);
+            }}
+            aria-label={`Logged in as ${currentUser.name}`}
+          >
+            <span className="user-avatar-small">{currentUser.avatarInitials}</span>
+            <span>{currentUser.name}</span>
+            <span className="chev">⌄</span>
+          </button>
+        ) : (
+          <button type="button" className="login" onClick={() => navigate("login")}>
+            Log in <span>↗</span>
+          </button>
+        )}
+      </div>
+
+      {userMenuOpen && currentUser && (
+        <div className="user-dropdown">
+          <div className="user-dropdown-head">
+            <span className="user-avatar-small" style={{ width: "36px", height: "36px", fontSize: "14px" }}>
+              {currentUser.avatarInitials}
+            </span>
+            <div>
+              <h4>{currentUser.name}</h4>
+              <small>{currentUser.email}</small>
+              <span className="user-dropdown-badge">● {currentUser.role.toUpperCase()}</span>
+            </div>
+          </div>
+          <div className="user-dropdown-links">
+            <button type="button" onClick={() => { setUserMenuOpen(false); navigate("admin"); }}><i>◇</i> Admin Console</button>
+            <button type="button" onClick={() => { setUserMenuOpen(false); navigate("farmer"); }}><i>♧</i> Farmer Portal</button>
+            <button type="button" onClick={() => { setUserMenuOpen(false); navigate("customer"); }}><i>⌂</i> Customer Account</button>
+            <button type="button" onClick={() => { setUserMenuOpen(false); navigate("login"); }}><i>⚙</i> Demo Credentials & Session</button>
+            <button type="button" className="user-logout-btn" onClick={() => { setUserMenuOpen(false); onLogout(); }}><i>⎋</i> Log Out</button>
+          </div>
+        </div>
+      )}
+
+      {roleOpen && (
+        <div className="role-menu">
+          <p>Continue as</p>
+          {roleInfo.map((item) => (
+            <button type="button" key={item.role} onClick={() => navigate(item.role)}>
+              <i>{item.icon}</i>
+              <span>{item.label}<small>{item.caption}</small></span>
+              <b>›</b>
+            </button>
+          ))}
+        </div>
+      )}
+    </header>
+  );
 }
 
 function Landing({navigate,addToCart,showProduct,onCompare,setClusterFilter}:{navigate:(v:View)=>void;addToCart:(p:Product, s?:ProductSource)=>void;showProduct:(p:Product, s?:ProductSource)=>void;onCompare:(p:Product)=>void;setClusterFilter:(c:string)=>void}) {
@@ -474,7 +623,27 @@ function ProductDetail({product,initialSource,addToCart,navigate,onCompare}:{pro
   </section>;
 }
 
-function Cart({cart,setCart,navigate,deliveryType,setDeliveryType,selectedDropCluster,setSelectedDropCluster}:{cart:CartEntry[];setCart:(v:CartEntry[])=>void;navigate:(v:View)=>void;deliveryType:"cluster_pickup"|"doorstep";setDeliveryType:(v:"cluster_pickup"|"doorstep")=>void;selectedDropCluster:Cluster;setSelectedDropCluster:(c:Cluster)=>void}) {
+function Cart({
+  cart,
+  setCart,
+  navigate,
+  deliveryType,
+  setDeliveryType,
+  selectedDropCluster,
+  setSelectedDropCluster,
+  userAddress,
+  setUserAddress,
+}: {
+  cart: CartEntry[];
+  setCart: (v: CartEntry[]) => void;
+  navigate: (v: View) => void;
+  deliveryType: "cluster_pickup" | "doorstep";
+  setDeliveryType: (v: "cluster_pickup" | "doorstep") => void;
+  selectedDropCluster: Cluster;
+  setSelectedDropCluster: (c: Cluster) => void;
+  userAddress: string;
+  setUserAddress: (addr: string) => void;
+}) {
   const subtotal = cart.reduce((s,item)=>s + (item.source.price * item.quantity), 0);
   const totalFarmerPayout = cart.reduce((s,item)=>s + (item.source.breakdown.farmerPayout * item.quantity), 0);
   const deliveryFee = deliveryType === "cluster_pickup" ? 0 : 35;
@@ -531,6 +700,20 @@ function Cart({cart,setCart,navigate,deliveryType,setDeliveryType,selectedDropCl
             </div>
           </button>
         </div>
+
+        {/* Delivery Cluster & Warehouse-to-Location Route Map */}
+        <DeliveryRouteMap
+          cart={cart}
+          deliveryCluster={selectedDropCluster}
+          deliveryType={deliveryType}
+          userAddress={userAddress}
+          onAddressChange={setUserAddress}
+          onSelectCluster={(id)=>{
+            const found = consumerClusters.find(c => c.id === id);
+            if (found) setSelectedDropCluster(found);
+          }}
+          availableDeliveryClusters={consumerClusters}
+        />
       </div>
       <aside className="order-summary">
         <h3>Order summary</h3>
@@ -554,20 +737,43 @@ function Cart({cart,setCart,navigate,deliveryType,setDeliveryType,selectedDropCl
   </section>;
 }
 
-function Tracking({navigate,deliveryType,dropCluster,cart}:{navigate:(v:View)=>void;deliveryType:"cluster_pickup"|"doorstep";dropCluster:Cluster;cart:CartEntry[]}) {
+function Tracking({
+  navigate,
+  deliveryType,
+  dropCluster,
+  cart,
+  userAddress,
+}: {
+  navigate: (v: View) => void;
+  deliveryType: "cluster_pickup" | "doorstep";
+  dropCluster: Cluster;
+  cart: CartEntry[];
+  userAddress: string;
+}) {
   const isClusterDrop = deliveryType === "cluster_pickup";
   const primarySource = cart[0]?.source || products[0].sources[0];
   const farmerTotal = cart.reduce((s,i)=>s + (i.source.breakdown.farmerPayout * i.quantity), 0);
 
   return <section className="tracking-page">
     <div className="success-banner"><span>✓</span><div><h3>Order placed successfully & disintermediated</h3><p>Direct payment confirmed to {primarySource.farmer} and cluster logistics.</p></div><b>Order #FH10248</b></div>
+    
+    {/* Full Warehouse-to-User Route Map on Live Tracking */}
+    <div style={{marginBottom:"24px"}}>
+      <DeliveryRouteMap
+        cart={cart}
+        deliveryCluster={dropCluster}
+        deliveryType={deliveryType}
+        userAddress={userAddress}
+      />
+    </div>
+
     <div className="tracking-grid">
       <article>
         <div className="tracking-head"><div><span className="section-kicker">LIVE CLUSTER ROUTE</span><h1>Arriving tomorrow</h1><p>Batch window: 7:00–9:00 AM</p></div><div className="delivery-avatar">AK</div></div>
         <div className="timeline">
           {[
-            ["Order pooled & payment settled","19 Aug · 7:42 PM (100% transparent split)",true],
-            [`Farmer confirmed (${primarySource.farmer} · ${primarySource.farm})`,"19 Aug · 7:48 PM",true],
+            ["Order pooled & payment settled","Today · 7:42 PM (100% transparent split)",true],
+            [`Farmer confirmed (${primarySource.farmer} · ${primarySource.farm})`,"Today · 7:48 PM",true],
             [`Consolidating at ${primarySource.clusterName}`,"In progress · Solar pre-cooling active",true],
             [isClusterDrop?`Refrigerated batch route to ${dropCluster.name}`:"Dispatched for doorstep courier","Tomorrow morning",false],
             [isClusterDrop?`Ready for pickup at ${dropCluster.hubLocation}`:"Delivered to home","Before 9:00 AM",false],
@@ -575,9 +781,8 @@ function Tracking({navigate,deliveryType,dropCluster,cart}:{navigate:(v:View)=>v
         </div>
       </article>
       <aside>
-        <div className="map-placeholder"><span>{primarySource.clusterName.slice(0,12)}</span><i>⌂</i><div className="route"></div><i>⌖</i><span>{isClusterDrop?dropCluster.name.slice(0,14):"YOUR HOME"}</span></div>
         <h3>Provenance certificate</h3>
-        <p><b>Destination: {isClusterDrop?`Community Drop: ${dropCluster.name}`:"Direct Doorstep"}</b><br/>{isClusterDrop?dropCluster.hubLocation:"22 Lake View Road, Velachery"}<br/>Chennai 600042</p>
+        <p><b>Destination: {isClusterDrop?`Community Drop: ${dropCluster.name}`:"Direct Doorstep"}</b><br/>{isClusterDrop?dropCluster.hubLocation:userAddress}<br/>Chennai, Tamil Nadu</p>
         <hr/>
         <div style={{fontSize:"10px",color:"#627768",lineHeight:"1.6"}}>
           <div><b>Direct Farmer Settlement:</b> <span style={{color:"#1b633f",fontWeight:700}}>₹{farmerTotal.toFixed(2)} transferred</span></div>
@@ -761,4 +966,4 @@ function Stats({data}:{data:string[][]}) { return <div className="stats-grid">{d
 function PanelHead({title,action}:{title:string;action?:string}) { return <div className="panel-head"><h3>{title}</h3>{action&&<button>{action}</button>}</div>; }
 function Status({text}:{text:string}) { return <span className={`status ${text.toLowerCase().replaceAll(" ","-")}`}>● {text}</span>; }
 function BarChart({admin=false}:{admin?:boolean}) { const values=admin?[32,48,43,67,61,86,74,98,91,113,104,132]:[42,57,49,78,65,89,76]; return <div className="bar-chart"><div className="grid-lines"><i/><i/><i/><i/></div>{values.map((v,i)=><div className="bar-column" key={i}><span style={{height:`${v}px`}}></span><small>{admin?["Mar","","May","","Jul","","Sep","","Nov","","Jan","Feb"][i]:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][i]}</small></div>)}</div>; }
-function Footer({navigate}:{navigate:(v:View)=>void}) { return <footer><div className="footer-brand"><button className="brand" onClick={()=>navigate("home")}><span className="brand-mark"><span>⌂</span></span><span>Farm<span>2</span>Home</span></button><p>From regional farm clusters, directly to your community with complete financial transparency.</p></div><div><b>Marketplace</b><button onClick={()=>navigate("shop")}>Shop fresh</button><button>Farm clusters</button><button>Financial audit</button></div><div><b>For partners</b><button onClick={()=>navigate("farmer")}>Farmer portal</button><button onClick={()=>navigate("admin")}>Admin console</button><button>Cluster hub operators</button></div><div><b>Prototype</b><span>Review 1 · Web UI</span><span>100% Provenance enabled</span><span>API-ready architecture</span></div></footer>; }
+function Footer({navigate}:{navigate:(v:View)=>void}) { return <footer><div className="footer-brand"><button className="brand" onClick={()=>navigate("home")}><span className="brand-mark"><span>⌂</span></span><span>Farm<span>2</span>Home</span></button><p>From regional farm clusters, directly to your community with complete financial transparency.</p></div><div><b>Marketplace</b><button onClick={()=>navigate("shop")}>Shop fresh</button><button>Farm clusters</button><button>Financial audit</button></div><div><b>For partners</b><button onClick={()=>navigate("farmer")}>Farmer portal</button><button onClick={()=>navigate("admin")}>Admin console</button><button onClick={()=>navigate("login")}>Sign in / Demo login</button><button>Cluster hub operators</button></div><div><b>Prototype</b><span>Review 1 · Web UI</span><span>100% Provenance enabled</span><span>API-ready architecture</span></div></footer>; }
