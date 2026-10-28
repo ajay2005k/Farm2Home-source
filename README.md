@@ -68,6 +68,12 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+### Vercel deployment
+
+The repository includes `vercel.json` and a `pnpm vercel:build` script for Vercel's Next.js runtime. Import this GitHub repository into Vercel using the **Next.js** framework preset. The build and install commands are specified in `vercel.json`; no environment variables are required for the current UI. `NEXT_PUBLIC_SITE_URL` can be set to a custom domain for canonical social metadata; otherwise Vercel's URL is used.
+
+The current login, catalog, and order screens use sample data and browser-local state. A Vercel deployment serves this interactive prototype, but it does not provide shared accounts or persistent server-side orders. Database-backed SaaS behavior requires a backend deployment before production use.
+
 ### Run Tests and Quality Checks
 
 ```bash

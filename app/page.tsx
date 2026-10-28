@@ -3,17 +3,11 @@
 import { useMemo, useState } from "react";
 import { clusters as seedClusters, orders as seedOrders, products, tenants as seedTenants } from "../mock-data";
 import { clearStoredUser, getStoredUser } from "../services/authService";
-import type { AuthUser, Cluster, OrderStatus, Product, ProductSource, Role } from "../types";
+import type { AuthUser, CartEntry, Cluster, OrderStatus, Product, ProductSource, Role } from "../types";
 import DeliveryRouteMap from "./DeliveryRouteMap";
 import LoginPage from "./LoginPage";
 
 type View = "home"|"shop"|"product"|"cart"|"tracking"|"customer"|"farmer"|"admin"|"login";
-
-type CartEntry = {
-  product: Product;
-  source: ProductSource;
-  quantity: number;
-};
 
 const categories = [
   ["Vegetables","🥬","#e4f1d9"],["Fruits","🍊","#fff0d8"],["Dairy","🥛","#eef2da"],["Grains","🌾","#f5ebd5"],
@@ -777,7 +771,7 @@ function Tracking({
             [`Consolidating at ${primarySource.clusterName}`,"In progress · Solar pre-cooling active",true],
             [isClusterDrop?`Refrigerated batch route to ${dropCluster.name}`:"Dispatched for doorstep courier","Tomorrow morning",false],
             [isClusterDrop?`Ready for pickup at ${dropCluster.hubLocation}`:"Delivered to home","Before 9:00 AM",false],
-          ].map((s,i)=><div className={s[2]?"done":""} key={s[0]}><i>{s[2]?(i===2?"●":"✓"):"○"}</i><span><b>{s[0]}</b><small>{s[1]}</small></span></div>)}
+          ].map((s,i)=><div className={s[2]?"done":""} key={String(s[0])}><i>{s[2]?(i===2?"●":"✓"):"○"}</i><span><b>{s[0]}</b><small>{s[1]}</small></span></div>)}
         </div>
       </article>
       <aside>
