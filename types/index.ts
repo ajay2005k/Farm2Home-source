@@ -82,6 +82,12 @@ export type CartItem = {
   quantity: number;
 };
 
+export type CartEntry = {
+  product: Product;
+  source: ProductSource;
+  quantity: number;
+};
+
 export type Order = {
   id: string;
   customer: string;
